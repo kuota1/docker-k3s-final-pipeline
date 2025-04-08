@@ -1,5 +1,5 @@
 ---
-name: 99 Parallelize Jobs
+name: Parallelize Jobs
 
 on:
   push:
@@ -12,6 +12,7 @@ jobs:
   build-test-image:
     name: Build Image for Testing
     runs-on: ubuntu-latest
+
 
     permissions:
       contents: read
@@ -39,7 +40,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           push: true
-          tags: ghcr.io/rober0010/testapp:${{ github.run_id }}
+          tags: ghcr.io/kuota1/testapp:${{ github.run_id }}
           target: test
           cache-from: type=gha
           cache-to: type=gha,mode=max
