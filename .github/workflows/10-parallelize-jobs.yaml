@@ -212,7 +212,7 @@ jobs:
         id: docker_meta
         uses: docker/metadata-action@v5
         with:
-          images: kuota1/testapp,ghcr.io/kuota1/testapp
+          images: rober0010/testapp,ghcr.io/kuota1/testapp
           flavor: |
             latest=false
           tags: |
