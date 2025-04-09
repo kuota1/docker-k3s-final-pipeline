@@ -1,5 +1,4 @@
----
-name: 99 Parallelize Jobs
+name: Parallelize Jobs
 
 on:
   push:
@@ -18,7 +17,6 @@ jobs:
       packages: write # needed to push docker image to ghcr.io
 
     steps:
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -34,18 +32,18 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_PAT }}
-      
+
       - name: Build and Push to GHCR
         uses: docker/build-push-action@v6
         with:
           push: true
-          tags: ghcr.io/rober0010/testapp:${{ github.run_id }}
+          tags: ghcr.io/kuota1/testapp:${{ github.run_id }}
           target: test
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64
-    
- # NEXT JOB #######################################################################   
+
+# NEXT JOB #######################################################################   
   test-unit:
     name: Unit tests in Docker
     needs: [build-test-image]
@@ -55,7 +53,6 @@ jobs:
       packages: read
       
     steps:
-      
       - name: Login to ghcr.io registry
         uses: docker/login-action@v3
         with:
@@ -64,7 +61,7 @@ jobs:
           password: ${{ secrets.GHCR_PAT }}
       
       - name: Unit Testing in Docker
-        run: docker run --rm ghcr.io/rober0010/testapp:"$GITHUB_RUN_ID" echo "run test commands here"
+        run: docker run --rm ghcr.io/kuota1/testapp:${{ github.run_id }} echo "run test commands here"
 
 # NEXT JOB #######################################################################   
   test-integration:
@@ -76,7 +73,6 @@ jobs:
       packages: read
 
     steps:
-
       - name: Checkout git repo
         uses: actions/checkout@v4
 
@@ -85,7 +81,7 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      
+
       - name: Login to ghcr.io registry
         uses: docker/login-action@v3
         with:
@@ -95,7 +91,7 @@ jobs:
 
       - name: Test healthcheck in Docker Compose
         run: |
-          export TESTING_IMAGE=ghcr.io/rober0010/testapp:"$GITHUB_RUN_ID"
+          export TESTING_IMAGE=ghcr.io/kuota1/testapp:${{ github.run_id }}
           echo Testing image: "$TESTING_IMAGE"
           docker compose -f docker-compose.test.yml up --exit-code-from sut
 
@@ -109,7 +105,6 @@ jobs:
       packages: read
 
     steps:
-
       - name: Checkout git repo
         uses: actions/checkout@v4
 
@@ -118,7 +113,7 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      
+
       - name: Login to ghcr.io registry
         uses: docker/login-action@v3
         with:
@@ -133,17 +128,17 @@ jobs:
             --agents 1
             --no-lb
             --k3s-arg "--no-deploy=traefik,servicelb,metrics-server@server:*"
-      
+
       - name: Smoke test deployment in k3d Kubernetes
         run: |
           kubectl create secret docker-registry regcred \
             --docker-server=https://ghcr.io \
             --docker-username=${{ github.actor }} \
             --docker-password=${{ secrets.GHCR_PAT }}
-          export TESTING_IMAGE=ghcr.io/bretfisher/docker-ci-automation:"$GITHUB_RUN_ID"
-          envsubst < manifests/deployment.yaml  | kubectl apply -f -
-          kubectl rollout status deployment myapp
-          kubectl exec deploy/myapp -- curl --fail localhost
+          export TESTING_IMAGE=ghcr.io/kuota1/testapp:${{ github.run_id }}
+          envsubst < manifests/deployment.yaml | kubectl apply -f -
+          kubectl rollout status deployment testapp
+          kubectl exec deploy/testapp -- curl --fail localhost
 
 # NEXT JOB #######################################################################   
   scan-image:
@@ -152,21 +147,20 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-      contents: read # for actions/checkout to fetch code
-      packages: read # needed to pull docker image to ghcr.io
-      security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
+      contents: read
+      packages: read
+      security-events: write
 
     steps:
-
       - name: Checkout git repo
         uses: actions/checkout@v4
-      
+
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-          
+
       - name: Login to ghcr.io registry
         uses: docker/login-action@v3
         with:
@@ -175,12 +169,12 @@ jobs:
           password: ${{ secrets.GHCR_PAT }}
 
       - name: Pull image to scan
-        run: docker pull ghcr.io/bretfisher/docker-ci-automation:"$GITHUB_RUN_ID"
-        
+        run: docker pull ghcr.io/kuota1/testapp:${{ github.run_id }}
+
       - name: Run Trivy for all CVEs (non-blocking)
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ghcr.io/rober0010/testapp:${{ github.run_id }}
+          image-ref: ghcr.io/kuota1/testapp:${{ github.run_id }}
           format: table
           exit-code: 0
 
@@ -191,11 +185,10 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-      packages: write # needed to push docker image to ghcr.io
-      pull-requests: write # needed to create and update comments in PRs
+      packages: write
+      pull-requests: write
 
     steps:
-
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
@@ -219,12 +212,12 @@ jobs:
         id: docker_meta
         uses: docker/metadata-action@v5
         with:
-          images: rober0010/testapp,ghcr.io/rober0010/testapp
+          images: kuota1/testapp,ghcr.io/kuota1/testapp
           flavor: |
             latest=false
           tags: |
             type=raw,value=99
-      
+
       - name: Docker Build and Push to GHCR and Docker Hub
         uses: docker/build-push-action@v6
         with:

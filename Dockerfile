@@ -1,18 +1,13 @@
-# sample dockerfile for testing docker builds
+# Base stage: simple Nginx with curl installed
 FROM nginx:alpine as base
 
-RUN apk add --no-cache curl
+RUN apk add --no-cache curl apache2-utils
 
 WORKDIR /test
 
 COPY . .
 
+# Optional test stage - for test-only pipelines
 FROM base as test
-
-#layer test tools and assets on top as optional test stage
-RUN apk add --no-cache apache2-utils
-
-
-FROM base as final
-
-# this layer gets built by default unless you set target to test
+# Aquí podrías agregar comandos de prueba si fuera necesario
+# Ejemplo: RUN ./run-tests.sh
